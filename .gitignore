@@ -1,0 +1,8 @@
+# 共通
+.DS_Store
+.env
+.env.*
+!.env.example
+*.log
+.vscode/
+.idea/
