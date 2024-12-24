@@ -10,13 +10,13 @@ import (
 
 // Handler handles HTTP requests
 type Handler struct {
-	svc *service.Service
+	a string
 }
 
 // New creates a new handler
 func New(svc *service.Service) *Handler {
 	return &Handler{
-		svc: svc,
+		a: "a",
 	}
 }
 
@@ -60,7 +60,7 @@ func (h *Handler) ToggleTaskCompletion(ctx context.Context, params api.ToggleTas
 }
 
 // UpdateTask implements the PUT /api/tasks/{id} endpoint
-func (h *Handler) UpdateTask(ctx context.Context, params api.UpdateTaskParams, req *api.TaskInput) (*api.Task, error) {
+func (h *Handler) UpdateTask(ctx context.Context, req *api.TaskInput, params api.UpdateTaskParams) (*api.Task, error) {
 	// TODO: Implement task update
 	return &api.Task{}, nil
 }
