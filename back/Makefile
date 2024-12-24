@@ -56,7 +56,7 @@ test:
 
 # OpenAPIコード生成
 ogen:
-	go run github.com/ogen-go/ogen/cmd/ogen --target internal/ogen --clean ../api/openapi.yaml
+	ogen -target internal/ogen -clean ../api/openapi.yaml
 
 # 全コード生成
 generate: sqlc ogen
