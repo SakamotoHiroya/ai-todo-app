@@ -20,6 +20,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+      security: []
   /api/auth/google/callback:
     get:
       summary: Google Authentication Callback
@@ -35,6 +36,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+      security: []
   /api/auth/logout:
     post:
       summary: Logout
@@ -48,6 +50,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+      security: []
   /api/tasks:
     get:
       summary: Get list of tasks
@@ -67,6 +70,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+      security:
+        - cookieAuth: []
     post:
       summary: Create a new task
       operationId: createTask
@@ -90,6 +95,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+      security:
+        - cookieAuth: [ ]
   /api/tasks/{id}:
     put:
       summary: Update an existing task
@@ -120,6 +127,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+      security:
+        - cookieAuth: [ ]
     delete:
       summary: Delete a task
       operationId: deleteTask
@@ -138,6 +147,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+      security:
+        - cookieAuth: [ ]
   /api/tasks/{id}/toggle:
     patch:
       summary: Toggle task completion state
@@ -161,6 +172,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+      security:
+        - cookieAuth: [ ]
 components:
   schemas:
     Task:
