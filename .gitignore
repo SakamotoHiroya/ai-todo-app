@@ -6,3 +6,19 @@
 *.log
 .vscode/
 .idea/
+
+# バックエンド
+back/bin/
+back/tmp/
+back/*.exe
+back/*.exe~
+back/*.dll
+back/*.so
+back/*.dylib
+back/*.test
+back/*.out
+back/vendor/
+back/.env
+back/coverage.txt
+back/*.cover
+back/*.coverprofile
