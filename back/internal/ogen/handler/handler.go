@@ -13,11 +13,22 @@ type Handler struct {
 	a string
 }
 
+type SecurityHandler struct{}
+
+func (s SecurityHandler) HandleCookieAuth(ctx context.Context, operationName string, t api.CookieAuth) (context.Context, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
 // New creates a new handler
 func New(svc *service.Service) *Handler {
 	return &Handler{
 		a: "a",
 	}
+}
+
+func NewSecurityHandler() *SecurityHandler {
+	return &SecurityHandler{}
 }
 
 // CreateTask implements the POST /api/tasks endpoint
