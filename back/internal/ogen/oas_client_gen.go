@@ -12,11 +12,12 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.19.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/ogen-go/ogen/conv"
 	ht "github.com/ogen-go/ogen/http"
+	"github.com/ogen-go/ogen/ogenerrors"
 	"github.com/ogen-go/ogen/otelogen"
 	"github.com/ogen-go/ogen/uri"
 )
@@ -76,6 +77,7 @@ type Invoker interface {
 // Client implements OAS client.
 type Client struct {
 	serverURL *url.URL
+	sec       SecuritySource
 	baseClient
 }
 type errorHandler interface {
@@ -93,7 +95,7 @@ func trimTrailingSlashes(u *url.URL) {
 }
 
 // NewClient initializes new Client defined by OAS.
-func NewClient(serverURL string, opts ...ClientOption) (*Client, error) {
+func NewClient(serverURL string, sec SecuritySource, opts ...ClientOption) (*Client, error) {
 	u, err := url.Parse(serverURL)
 	if err != nil {
 		return nil, err
@@ -106,6 +108,7 @@ func NewClient(serverURL string, opts ...ClientOption) (*Client, error) {
 	}
 	return &Client{
 		serverURL:  u,
+		sec:        sec,
 		baseClient: c,
 	}, nil
 }
@@ -138,7 +141,7 @@ func (c *Client) CreateTask(ctx context.Context, request *TaskInput) (*Task, err
 func (c *Client) sendCreateTask(ctx context.Context, request *TaskInput) (res *Task, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("createTask"),
-		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.HTTPMethodKey.String("POST"),
 		semconv.HTTPRouteKey.String("/api/tasks"),
 	}
 
@@ -147,14 +150,14 @@ func (c *Client) sendCreateTask(ctx context.Context, request *TaskInput) (res *T
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, CreateTaskOperation,
+	ctx, span := c.cfg.Tracer.Start(ctx, "CreateTask",
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -182,6 +185,39 @@ func (c *Client) sendCreateTask(ctx context.Context, request *TaskInput) (res *T
 	}
 	if err := encodeCreateTaskRequest(request, r); err != nil {
 		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:CookieAuth"
+			switch err := c.securityCookieAuth(ctx, "CreateTask", r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"CookieAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
 	}
 
 	stage = "SendRequest"
@@ -213,7 +249,7 @@ func (c *Client) DeleteTask(ctx context.Context, params DeleteTaskParams) error 
 func (c *Client) sendDeleteTask(ctx context.Context, params DeleteTaskParams) (res *DeleteTaskNoContent, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("deleteTask"),
-		semconv.HTTPRequestMethodKey.String("DELETE"),
+		semconv.HTTPMethodKey.String("DELETE"),
 		semconv.HTTPRouteKey.String("/api/tasks/{id}"),
 	}
 
@@ -222,14 +258,14 @@ func (c *Client) sendDeleteTask(ctx context.Context, params DeleteTaskParams) (r
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, DeleteTaskOperation,
+	ctx, span := c.cfg.Tracer.Start(ctx, "DeleteTask",
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -274,6 +310,39 @@ func (c *Client) sendDeleteTask(ctx context.Context, params DeleteTaskParams) (r
 		return res, errors.Wrap(err, "create request")
 	}
 
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:CookieAuth"
+			switch err := c.securityCookieAuth(ctx, "DeleteTask", r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"CookieAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
 	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
@@ -303,7 +372,7 @@ func (c *Client) GetTasks(ctx context.Context) ([]Task, error) {
 func (c *Client) sendGetTasks(ctx context.Context) (res []Task, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getTasks"),
-		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.HTTPMethodKey.String("GET"),
 		semconv.HTTPRouteKey.String("/api/tasks"),
 	}
 
@@ -312,14 +381,14 @@ func (c *Client) sendGetTasks(ctx context.Context) (res []Task, err error) {
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, GetTasksOperation,
+	ctx, span := c.cfg.Tracer.Start(ctx, "GetTasks",
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -344,6 +413,39 @@ func (c *Client) sendGetTasks(ctx context.Context) (res []Task, err error) {
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:CookieAuth"
+			switch err := c.securityCookieAuth(ctx, "GetTasks", r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"CookieAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
 	}
 
 	stage = "SendRequest"
@@ -375,7 +477,7 @@ func (c *Client) GoogleAuthCallback(ctx context.Context) (GoogleAuthCallbackRes,
 func (c *Client) sendGoogleAuthCallback(ctx context.Context) (res GoogleAuthCallbackRes, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("googleAuthCallback"),
-		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.HTTPMethodKey.String("GET"),
 		semconv.HTTPRouteKey.String("/api/auth/google/callback"),
 	}
 
@@ -384,14 +486,14 @@ func (c *Client) sendGoogleAuthCallback(ctx context.Context) (res GoogleAuthCall
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, GoogleAuthCallbackOperation,
+	ctx, span := c.cfg.Tracer.Start(ctx, "GoogleAuthCallback",
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -447,7 +549,7 @@ func (c *Client) Logout(ctx context.Context) error {
 func (c *Client) sendLogout(ctx context.Context) (res *LogoutNoContent, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("logout"),
-		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.HTTPMethodKey.String("POST"),
 		semconv.HTTPRouteKey.String("/api/auth/logout"),
 	}
 
@@ -456,14 +558,14 @@ func (c *Client) sendLogout(ctx context.Context) (res *LogoutNoContent, err erro
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, LogoutOperation,
+	ctx, span := c.cfg.Tracer.Start(ctx, "Logout",
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -519,7 +621,7 @@ func (c *Client) StartGoogleAuth(ctx context.Context) error {
 func (c *Client) sendStartGoogleAuth(ctx context.Context) (res *StartGoogleAuthFound, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("startGoogleAuth"),
-		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.HTTPMethodKey.String("GET"),
 		semconv.HTTPRouteKey.String("/api/auth/google"),
 	}
 
@@ -528,14 +630,14 @@ func (c *Client) sendStartGoogleAuth(ctx context.Context) (res *StartGoogleAuthF
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, StartGoogleAuthOperation,
+	ctx, span := c.cfg.Tracer.Start(ctx, "StartGoogleAuth",
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -591,7 +693,7 @@ func (c *Client) ToggleTaskCompletion(ctx context.Context, params ToggleTaskComp
 func (c *Client) sendToggleTaskCompletion(ctx context.Context, params ToggleTaskCompletionParams) (res *Task, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("toggleTaskCompletion"),
-		semconv.HTTPRequestMethodKey.String("PATCH"),
+		semconv.HTTPMethodKey.String("PATCH"),
 		semconv.HTTPRouteKey.String("/api/tasks/{id}/toggle"),
 	}
 
@@ -600,14 +702,14 @@ func (c *Client) sendToggleTaskCompletion(ctx context.Context, params ToggleTask
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ToggleTaskCompletionOperation,
+	ctx, span := c.cfg.Tracer.Start(ctx, "ToggleTaskCompletion",
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -653,6 +755,39 @@ func (c *Client) sendToggleTaskCompletion(ctx context.Context, params ToggleTask
 		return res, errors.Wrap(err, "create request")
 	}
 
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:CookieAuth"
+			switch err := c.securityCookieAuth(ctx, "ToggleTaskCompletion", r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"CookieAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
 	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
@@ -682,7 +817,7 @@ func (c *Client) UpdateTask(ctx context.Context, request *TaskInput, params Upda
 func (c *Client) sendUpdateTask(ctx context.Context, request *TaskInput, params UpdateTaskParams) (res *Task, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("updateTask"),
-		semconv.HTTPRequestMethodKey.String("PUT"),
+		semconv.HTTPMethodKey.String("PUT"),
 		semconv.HTTPRouteKey.String("/api/tasks/{id}"),
 	}
 
@@ -691,14 +826,14 @@ func (c *Client) sendUpdateTask(ctx context.Context, request *TaskInput, params 
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, UpdateTaskOperation,
+	ctx, span := c.cfg.Tracer.Start(ctx, "UpdateTask",
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -744,6 +879,39 @@ func (c *Client) sendUpdateTask(ctx context.Context, request *TaskInput, params 
 	}
 	if err := encodeUpdateTaskRequest(request, r); err != nil {
 		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:CookieAuth"
+			switch err := c.securityCookieAuth(ctx, "UpdateTask", r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"CookieAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
 	}
 
 	stage = "SendRequest"

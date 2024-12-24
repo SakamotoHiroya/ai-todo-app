@@ -342,7 +342,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 					if len(elem) == 0 {
 						switch method {
 						case "GET":
-							r.name = StartGoogleAuthOperation
+							r.name = "StartGoogleAuth"
 							r.summary = "Start Google Authentication"
 							r.operationID = "startGoogleAuth"
 							r.pathPattern = "/api/auth/google"
@@ -366,7 +366,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 							// Leaf node.
 							switch method {
 							case "GET":
-								r.name = GoogleAuthCallbackOperation
+								r.name = "GoogleAuthCallback"
 								r.summary = "Google Authentication Callback"
 								r.operationID = "googleAuthCallback"
 								r.pathPattern = "/api/auth/google/callback"
@@ -394,7 +394,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 						// Leaf node.
 						switch method {
 						case "POST":
-							r.name = LogoutOperation
+							r.name = "Logout"
 							r.summary = "Logout"
 							r.operationID = "logout"
 							r.pathPattern = "/api/auth/logout"
@@ -421,7 +421,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 				if len(elem) == 0 {
 					switch method {
 					case "GET":
-						r.name = GetTasksOperation
+						r.name = "GetTasks"
 						r.summary = "Get list of tasks"
 						r.operationID = "getTasks"
 						r.pathPattern = "/api/tasks"
@@ -429,7 +429,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 						r.count = 0
 						return r, true
 					case "POST":
-						r.name = CreateTaskOperation
+						r.name = "CreateTask"
 						r.summary = "Create a new task"
 						r.operationID = "createTask"
 						r.pathPattern = "/api/tasks"
@@ -461,7 +461,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 					if len(elem) == 0 {
 						switch method {
 						case "DELETE":
-							r.name = DeleteTaskOperation
+							r.name = "DeleteTask"
 							r.summary = "Delete a task"
 							r.operationID = "deleteTask"
 							r.pathPattern = "/api/tasks/{id}"
@@ -469,7 +469,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 							r.count = 1
 							return r, true
 						case "PUT":
-							r.name = UpdateTaskOperation
+							r.name = "UpdateTask"
 							r.summary = "Update an existing task"
 							r.operationID = "updateTask"
 							r.pathPattern = "/api/tasks/{id}"
@@ -493,7 +493,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 							// Leaf node.
 							switch method {
 							case "PATCH":
-								r.name = ToggleTaskCompletionOperation
+								r.name = "ToggleTaskCompletion"
 								r.summary = "Toggle task completion state"
 								r.operationID = "toggleTaskCompletion"
 								r.pathPattern = "/api/tasks/{id}/toggle"
