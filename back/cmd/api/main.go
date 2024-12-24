@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/SakamotoHiroya/ai-todo-app/internal/middleware"
 	api "github.com/SakamotoHiroya/ai-todo-app/internal/ogen"
 	"github.com/SakamotoHiroya/ai-todo-app/internal/ogen/handler"
 	"github.com/SakamotoHiroya/ai-todo-app/internal/service"
@@ -20,9 +21,10 @@ func main() {
 
 	// Initialize handler
 	h := handler.New(svc)
+	s := handler.NewSecurityHandler()
 
 	// Initialize server
-	srv, err := api.NewServer(h)
+	srv, err := api.NewServer(h, s, api.WithMiddleware(middleware.Logging()))
 	if err != nil {
 		log.Fatalf("Failed to create server: %v", err)
 	}
